@@ -34,8 +34,8 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.pdfbox.exceptions.CryptographyException;
-import org.apache.pdfbox.exceptions.InvalidPasswordException;
+
+import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import org.lucee.extension.pdf.PDFStruct;
 import org.lucee.extension.pdf.util.PDFUtil;
 
@@ -1398,7 +1398,7 @@ public class PDF extends BodyTagImpl {
 
 	}
 
-	private void doActionExtractText() throws PageException, IOException, CryptographyException, InvalidPasswordException {
+	private void doActionExtractText() throws PageException, IOException, InvalidPasswordException {
 		required("pdf", "extractText", "name", name, true);
 		required("pdf", "extractText", "source", source);
 		PDFStruct doc = toPDFDocument(source, password, null);
