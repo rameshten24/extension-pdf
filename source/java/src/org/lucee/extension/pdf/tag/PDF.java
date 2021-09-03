@@ -84,6 +84,7 @@ public class PDF extends BodyTagImpl {
 	private static final int ACTION_ADD_HEADER = 12;
 	private static final int ACTION_ADD_FOOTER = 13;
 	private static final int ACTION_OPEN = 14;
+	private static final int ACTION_EXTRACT_IMAGES = 15;
 
 	private static final String FORMAT_JPG = "jpg";
 	private static final String FORMAT_TIFF = "tiff";
@@ -309,6 +310,9 @@ public class PDF extends BodyTagImpl {
 		else if ("extracttext".equals(strAction)) action = ACTION_EXTRACT_TEXT;
 		else if ("extract-text".equals(strAction)) action = ACTION_EXTRACT_TEXT;
 		else if ("extract_text".equals(strAction)) action = ACTION_EXTRACT_TEXT;
+		else if ("extractimages".equals(strAction)) action = ACTION_EXTRACT_IMAGES;
+		else if ("extract-images".equals(strAction)) action = ACTION_EXTRACT_IMAGES;
+		else if ("extract_images".equals(strAction)) action = ACTION_EXTRACT_IMAGES;
 		else if ("addheader".equals(strAction)) action = ACTION_ADD_HEADER;
 		else if ("addfooter".equals(strAction)) action = ACTION_ADD_FOOTER;
 
@@ -694,6 +698,8 @@ public class PDF extends BodyTagImpl {
 			else if (ACTION_THUMBNAIL == action) doActionThumbnail();
 			else if (ACTION_EXTRACT_TEXT == action) {
 				doActionExtractText();
+			}else if (ACTION_EXTRACT_IMAGES == action) {
+				doActionExtractImages();
 			}
 
 			// else if(ACTION_PROCESSDDX==action) throw
@@ -1408,6 +1414,19 @@ public class PDF extends BodyTagImpl {
 		Set<Integer> pageSet = PDFUtil.parsePageDefinition(pages, len);
 
 		pageContext.setVariable(name, PDFUtil.extractText(doc, pageSet, type));
+	}
+
+	private void doActionExtractImages() throws PageException, IOException, InvalidPasswordException {
+		required("pdf", "extractImages", "pages", pages);
+		required("pdf", "extractImages", "source", source);
+		required("pdf", "extractImages", "destination", destination);
+		required("pdf", "extractImages", "imagePrefix", imagePrefix);
+		PDFStruct doc = toPDFDocument(source, password, null);
+		PdfReader reader = doc.getPdfReader();
+		int len = reader.getNumberOfPages();
+		if (pages == null) pages = "1-" + len + "";
+		Set<Integer> pageSet = PDFUtil.parsePageDefinition(pages, len);
+		PDFUtil.extractImages(pageContext,doc,pageSet,destination,imagePrefix);
 	}
 
 	private Object allowed(boolean encrypted, int permissions, int permission) {

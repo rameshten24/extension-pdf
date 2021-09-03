@@ -30,15 +30,24 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.io.File;  
+import javax.imageio.ImageIO;
+import javax.xml.transform.Source;
 
 import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageTree;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.pdmodel.PDResources;
+import org.apache.pdfbox.pdmodel.graphics.PDXObject;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.lucee.extension.pdf.PDFStruct;
 import org.lucee.extension.pdf.img.PDF2ImageICEpdf;
 import org.lucee.extension.pdf.tag.PDF;
+
 
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
@@ -379,5 +388,32 @@ public class PDFUtil {
 
 		return sb.toString();
 		// return pdDoc.getDocumentCatalog().getAllPages().get(2);
+	}
+
+	public static void extractImages(PageContext pc,PDFStruct doc, Set<Integer> pageNumbers,Resource destination, String imagePrefix) throws IOException, InvalidPasswordException,PageException {
+
+		PDDocument pdDoc = doc.toPDDocument();
+		int n = pdDoc.getNumberOfPages();
+		Iterator<Integer> it = pageNumbers.iterator();
+		int p;
+		PDPageTree pages= pdDoc.getPages();
+		while (it.hasNext()) {	
+			p = it.next();
+			if (p > n) throw new RuntimeException("pdf page size [" + p + "] out of range, maximum page size is [" + n + "]");
+			PDResources pdResources = pages.get(p - 1).getResources();
+             int i = 1;
+               for (COSName name : pdResources.getXObjectNames()) {
+                    PDXObject o = pdResources.getXObject(name);
+                 	   if (o instanceof PDImageXObject) {
+							PDImageXObject image = (PDImageXObject)o;
+							String filename = destination + imagePrefix+"-" + i + ".png";
+							CFMLEngine engine = CFMLEngineFactory.getInstance();
+							Resource res = engine.getResourceUtil().toResourceExisting(pc,filename);
+							CFMLEngineFactory.getInstance().getIOUtil().copy(image.createInputStream(),res.getOutputStream(),true, true);
+							i++;
+                    }
+                }
+		}
+
 	}
 }
