@@ -27,8 +27,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.pdfbox.exceptions.CryptographyException;
-import org.apache.pdfbox.exceptions.InvalidPasswordException;
+import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.lucee.extension.pdf.util.PDFUtil;
 import org.lucee.extension.pdf.util.StructSupport;
@@ -359,14 +358,17 @@ public class PDFStruct extends StructSupport implements Struct {
 		return getInfo().values();
 	}
 
-	public PDDocument toPDDocument() throws CryptographyException, InvalidPasswordException, IOException {
+	public PDDocument toPDDocument() throws  InvalidPasswordException, IOException {
 		PDDocument doc;
-		if (barr != null) doc = PDDocument.load(new ByteArrayInputStream(barr, 0, barr.length));
-		else if (resource instanceof File) doc = PDDocument.load((File) resource);
-		else doc = PDDocument.load(new ByteArrayInputStream(PDFUtil.toBytes(resource), 0, barr.length));
-
-		if (password != null) doc.decrypt(password);
-
+		if (password != null){
+			if (barr != null) doc = PDDocument.load(new ByteArrayInputStream(barr, 0, barr.length),password);
+			else if (resource instanceof File) doc = PDDocument.load((File) resource,password);
+			else doc = PDDocument.load(new ByteArrayInputStream(PDFUtil.toBytes(resource), 0, barr.length),password);
+		}else {
+			if (barr != null) doc = PDDocument.load(new ByteArrayInputStream(barr, 0, barr.length));
+			else if (resource instanceof File) doc = PDDocument.load((File) resource);
+			else doc = PDDocument.load(new ByteArrayInputStream(PDFUtil.toBytes(resource), 0, barr.length));
+		}
 		return doc;
 
 	}

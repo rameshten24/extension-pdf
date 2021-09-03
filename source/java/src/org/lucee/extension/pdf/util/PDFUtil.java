@@ -30,15 +30,24 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.io.File;  
+import javax.imageio.ImageIO;
+import javax.xml.transform.Source;
 
-import org.apache.pdfbox.exceptions.CryptographyException;
-import org.apache.pdfbox.exceptions.InvalidPasswordException;
+import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.util.PDFTextStripper;
+import org.apache.pdfbox.pdmodel.PDPageTree;
+import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.pdmodel.PDResources;
+import org.apache.pdfbox.pdmodel.graphics.PDXObject;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.lucee.extension.pdf.PDFStruct;
 import org.lucee.extension.pdf.img.PDF2ImageICEpdf;
 import org.lucee.extension.pdf.tag.PDF;
+
 
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
@@ -331,18 +340,19 @@ public class PDFUtil {
 		// overwrite, goodQuality, transparent);
 	}
 
-	public static Object extractText(PDFStruct doc, Set<Integer> pageNumbers, int type) throws IOException, CryptographyException, InvalidPasswordException {
+	public static Object extractText(PDFStruct doc, Set<Integer> pageNumbers, int type) throws IOException, InvalidPasswordException {
 		PDDocument pdDoc = doc.toPDDocument();
 		// PDDocument newDocument = new PDDocument();
 		// List pages = pdDoc.getDocumentCatalog().getAllPages();
 		// pages.
 		// pdDoc.getDocumentCatalog().
-		int n = pdDoc.getPageCount();
+		int n = pdDoc.getNumberOfPages();
 		Iterator<Integer> it = pageNumbers.iterator();
 		// PDFTextStripper textStripper=new PDFTextStripper();
 		int p;
 		StringBuilder sb = new StringBuilder();
 		PDFTextStripper stripper = new PDFTextStripper();
+		PDPageTree pages= pdDoc.getPages();
 
 		if (type == PDF.TYPE_XML) {
 			sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
@@ -355,7 +365,7 @@ public class PDFUtil {
 			p = it.next();
 			if (type == PDF.TYPE_XML) sb.append("<page pagenumber=" + "\"" + p + "\" " + ">");
 			if (p > n) throw new RuntimeException("pdf page size [" + p + "] out of range, maximum page size is [" + n + "]");
-			document.addPage((PDPage) pdDoc.getDocumentCatalog().getAllPages().get(p - 1));
+			document.addPage((PDPage) pages.get(p - 1));
 			String text = stripper.getText(document);
 			System.out.println("text:" + text);
 			sb.append(text);
@@ -378,5 +388,32 @@ public class PDFUtil {
 
 		return sb.toString();
 		// return pdDoc.getDocumentCatalog().getAllPages().get(2);
+	}
+
+	public static void extractImages(PageContext pc,PDFStruct doc, Set<Integer> pageNumbers,Resource destination, String imagePrefix) throws IOException, InvalidPasswordException,PageException {
+
+		PDDocument pdDoc = doc.toPDDocument();
+		int n = pdDoc.getNumberOfPages();
+		Iterator<Integer> it = pageNumbers.iterator();
+		int p;
+		PDPageTree pages= pdDoc.getPages();
+		while (it.hasNext()) {	
+			p = it.next();
+			if (p > n) throw new RuntimeException("pdf page size [" + p + "] out of range, maximum page size is [" + n + "]");
+			PDResources pdResources = pages.get(p - 1).getResources();
+             int i = 1;
+               for (COSName name : pdResources.getXObjectNames()) {
+                    PDXObject o = pdResources.getXObject(name);
+                 	   if (o instanceof PDImageXObject) {
+							PDImageXObject image = (PDImageXObject)o;
+							String filename = destination + imagePrefix+"-" + i + ".png";
+							CFMLEngine engine = CFMLEngineFactory.getInstance();
+							Resource res = engine.getResourceUtil().toResourceExisting(pc,filename);
+							CFMLEngineFactory.getInstance().getIOUtil().copy(image.createInputStream(),res.getOutputStream(),true, true);
+							i++;
+                    }
+                }
+		}
+
 	}
 }
